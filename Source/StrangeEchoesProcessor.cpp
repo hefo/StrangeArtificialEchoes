@@ -114,6 +114,15 @@ void StrangeEchoesAudioProcessor::prepareToPlay (double sampleRate, int samplesP
     // Prepare LFO
     lfoPhase = 0.0f;
     
+    
+    // prepare pitch shifter
+    // TODO: consider changing pitch shift preset based on block size (weird noises when buffer size < 128)
+    tmpPitchShiftInput.setSize(2, samplesPerBlock);
+    tmpPitchShiftOutput.setSize(2, samplesPerBlock);
+    pitchShifter.presetCheaper(2, sampleRate);
+    pitchShifter.setTransposeSemitones(effectSettings.pitchShift);
+    
+    
     // Prepare frequency shifter
     tmpBufferI.setSize(1, samplesPerBlock);
     tmpBufferI.clear(0, 0, samplesPerBlock);
@@ -150,7 +159,6 @@ void StrangeEchoesAudioProcessor::prepareToPlay (double sampleRate, int samplesP
     oscQ.initialise([](float x) { return std::cos(x); }, 128);
     oscQ.setFrequency(0.0f);
     oscQ.reset();
-    
 }
 
 void StrangeEchoesAudioProcessor::releaseResources()
@@ -253,6 +261,20 @@ void StrangeEchoesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
     filterChainL.process(leftContext);
     filterChainR.process(rightContext);
     
+    // pitch shifter
+    float pitchShiftAmount = effectSettings.pitchShiftAmount;
+    
+    pitchShifter.setTransposeSemitones(effectSettings.pitchShift);
+    pitchShifter.process(wetSignal.getArrayOfReadPointers(), tmpPitchShiftInput.getNumSamples(), tmpPitchShiftOutput.getArrayOfWritePointers(), tmpPitchShiftOutput.getNumSamples());
+    
+    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    {
+        wetSignal.applyGain(channel, 0, bufferSize, 1.f - pitchShiftAmount);
+        wetSignal.addFromWithRamp(channel, 0, tmpPitchShiftOutput.getReadPointer(channel), tmpPitchShiftOutput.getNumSamples(), prevPitchShiftAmount, pitchShiftAmount);
+    }
+    
+    prevPitchShiftAmount = pitchShiftAmount;
+        
     // Process frequency shifter and write to feedback
     oscI.setFrequency(effectSettings.freqShift);
     oscQ.setFrequency(effectSettings.freqShift);
@@ -308,7 +330,6 @@ void StrangeEchoesAudioProcessor::updateFilterChains(float lowPassFreq, float hi
     auto& rightLowPass = filterChainR.get<1>();
     *rightLowPass.get<0>().coefficients = *lowPassCoefficients[0];
     *rightLowPass.get<1>().coefficients = *lowPassCoefficients[0];
-    
 }
 
 void StrangeEchoesAudioProcessor::frequencyShifter(int channel, int bufferSize)
@@ -502,6 +523,8 @@ EffectSettings getEffectSettings(juce::AudioProcessorValueTreeState& apvts, floa
     settings.lfoRate =      apvts.getRawParameterValue("LFO Rate")->load();
     settings.lfoAmount =    apvts.getRawParameterValue("LFO Amount")->load();
     settings.freqShift =    apvts.getRawParameterValue("Frequency Shift")->load();
+    settings.pitchShift =   apvts.getRawParameterValue("Pitch Shift")->load();
+    settings.pitchShiftAmount =   apvts.getRawParameterValue("Pitch Shift Amount")->load();
     settings.lowPassFreq =  apvts.getRawParameterValue("LowPass Freq")->load();
     settings.highPassFreq = apvts.getRawParameterValue("HighPass Freq")->load();
     
@@ -551,9 +574,19 @@ juce::AudioProcessorValueTreeState::ParameterLayout StrangeEchoesAudioProcessor:
                                                            0.1f));
     
     layout.add(std::make_unique<juce::AudioParameterFloat>("Frequency Shift",
-                                                           "Frequency Shifter",
+                                                           "Frequency Shift",
                                                            juce::NormalisableRange<float>(0.0f, 1000.f, 0.1f, 1.f),
                                                            0.0f));
+    
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Pitch Shift",
+                                                           "Pitch Shift",
+                                                           juce::NormalisableRange<float>(-12.f, 12.f, 1.f, 1.f),
+                                                           0.0f));
+    
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Pitch Shift Amount",
+                                                           "Pitch Shift Amount",
+                                                           juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.f),
+                                                           0.f));
     
     layout.add(std::make_unique<juce::AudioParameterFloat>("LowPass Freq",
                                                            "Low Pass Filter",

@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 #include <juce_core/juce_core.h>
+#include "signalsmith-stretch/signalsmith-stretch.h"
 
 struct EffectSettings
 {
@@ -12,6 +13,8 @@ struct EffectSettings
             lfoRate{0.0},
             lfoAmount{0.0},
             freqShift{0.0},
+            pitchShift{0.0},
+            pitchShiftAmount{0.0},
             lowPassFreq{0.0},
             highPassFreq{0.0};
     
@@ -89,6 +92,12 @@ private:
     
     // LFO
     float lfoPhase;
+    
+    // Pitch shifter
+    juce::AudioBuffer<float> tmpPitchShiftInput;
+    juce::AudioBuffer<float> tmpPitchShiftOutput;
+    signalsmith::stretch::SignalsmithStretch<float> pitchShifter;
+    float prevPitchShiftAmount{0.f};
     
     // Frequency shifter
     juce::dsp::Oscillator<float> oscI;

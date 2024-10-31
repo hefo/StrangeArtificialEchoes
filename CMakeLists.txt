@@ -27,12 +27,14 @@ CPMAddPackage(
     GIT_TAG origin/master
 )
 
+
 # Make sure you include any new source files here
 set(SourceFiles
         Source/StrangeEchoesEditor.cpp
         Source/StrangeEchoesEditor.h
         Source/StrangeEchoesProcessor.cpp
         Source/StrangeEchoesProcessor.h
+	Source/signalsmith-stretch
 )
 
 # Change these to your own preferences
