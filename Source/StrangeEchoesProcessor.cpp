@@ -93,7 +93,7 @@ void StrangeEchoesAudioProcessor::prepareToPlay (double sampleRate, int samplesP
     wetSignal.clear(0, 0, samplesPerBlock);
     wetSignal.clear(1, 0, samplesPerBlock);
         
-    auto delayBufferSize = 5.0 * sampleRate;
+    auto delayBufferSize = 2.5 * sampleRate;
     delayBuffer.setSize(2, (int)delayBufferSize);
     delayBuffer.clear(0, 0, (int)delayBufferSize);
     delayBuffer.clear(1, 0, (int)delayBufferSize);
@@ -122,43 +122,7 @@ void StrangeEchoesAudioProcessor::prepareToPlay (double sampleRate, int samplesP
     pitchShifter.presetCheaper(2, sampleRate);
     pitchShifter.setTransposeSemitones(effectSettings.pitchShift);
     
-    
-    // Prepare frequency shifter
-    tmpBufferI.setSize(1, samplesPerBlock);
-    tmpBufferI.clear(0, 0, samplesPerBlock);
-    tmpBufferQ.setSize(1, samplesPerBlock);
-    tmpBufferQ.clear(0, 0, samplesPerBlock);
-    
-    tmpBufferOscI.setSize(1, samplesPerBlock);
-    tmpBufferOscI.clear(0, 0, samplesPerBlock);
-    tmpBufferOscQ.setSize(1, samplesPerBlock);
-    tmpBufferOscQ.clear(0, 0, samplesPerBlock);
-    
-    firFilterL.reset();
-    firFilterL.prepare(spec);
-    firFilterL.coefficients = coeffs;
-    
-    firFilterR.reset();
-    firFilterR.prepare(spec);
-    firFilterR.coefficients = coeffs;
-    
-    firDelay.setSize(2, firDelayInSamples);
-    firDelay.clear();
-    firDelayWritePosition = 0;
-    
-    juce::dsp::ProcessSpec oscSpec;
-    oscSpec.sampleRate = sampleRate;
-    oscSpec.maximumBlockSize = static_cast<uint32_t>(samplesPerBlock);
-    oscSpec.numChannels = 1;
-    oscI.prepare(oscSpec);
-    oscI.initialise([](float x) { return std::sin(x); }, 128);
-    oscI.setFrequency(0.0f);
-    oscI.reset();
-    
-    oscQ.prepare(oscSpec);
-    oscQ.initialise([](float x) { return std::cos(x); }, 128);
-    oscQ.setFrequency(0.0f);
-    oscQ.reset();
+    freqShifter.prepare(sampleRate, samplesPerBlock);
 }
 
 void StrangeEchoesAudioProcessor::releaseResources()
@@ -206,22 +170,19 @@ void StrangeEchoesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
         buffer.clear (i, 0, buffer.getNumSamples());
     
     // extract BPM from DAW (needs fix, works in Ableton but crashes when running in standalone mode)
-    float currentBpm { 120 }; // default fallback when host does not provide info
-//    if (auto bpmFromHost = *getPlayHead()->getPosition()->getBpm())
-//            currentBpm = bpmFromHost;
+    float currentBpm { 120 };
+    if (auto bpmFromHost = *getPlayHead()->getPosition()->getBpm())
+            currentBpm = bpmFromHost;
     
-    // read effect settings from audio parameter value tree state
     auto effectSettings = getEffectSettings(apvts, currentBpm);
     delayTimeMsSmooth.setTargetValue(effectSettings.delayTimeMs);
     
-    // process lfo
     float LFOsample = std::sin(lfoPhase * 2 * juce::MathConstants<float>::pi);
     
     lfoPhase += static_cast<float>(bufferSize / getSampleRate() * effectSettings.lfoRate);
     if (lfoPhase > 1)
         lfoPhase -= 1.0f;
     
-    // set read position based on delay time
     float delayTimeMs = juce::jlimit(minDelayTimeMs, maxDelayTimeMs, delayTimeMsSmooth.getNextValue() + LFOsample * effectSettings.lfoAmount);
     int delayTimeInSamples = static_cast<int>(delayTimeMs / 1000.0 * getSampleRate());
     
@@ -274,25 +235,16 @@ void StrangeEchoesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
     }
     
     prevPitchShiftAmount = pitchShiftAmount;
-        
-    // Process frequency shifter and write to feedback
-    oscI.setFrequency(effectSettings.freqShift);
-    oscQ.setFrequency(effectSettings.freqShift);
     
-    processOscillator(&tmpBufferOscI, &oscI);
-    processOscillator(&tmpBufferOscQ, &oscQ);
-    
-    tmpBufferI.clear(0,0,bufferSize);
-    tmpBufferQ.clear(0,0,bufferSize);
+    // frequency shifter
+    freqShifter.configure(effectSettings.freqShift, effectSettings.sideBandMix);
+    freqShifter.process(wetSignal.getArrayOfWritePointers(), bufferSize);
     
     float dryWetMix = effectSettings.drywet;
     float feedback = effectSettings.feedback;
     
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
-        // Frequency shifter
-        frequencyShifter(channel, bufferSize);
-
         // Writes feedback from wetSignal -> delayBuffer
         writeToDelayBuffer(wetSignal, channel, channel, prevFeedback, feedback, false);
                 
@@ -332,48 +284,105 @@ void StrangeEchoesAudioProcessor::updateFilterChains(float lowPassFreq, float hi
     *rightLowPass.get<1>().coefficients = *lowPassCoefficients[0];
 }
 
-void StrangeEchoesAudioProcessor::frequencyShifter(int channel, int bufferSize)
+void FrequencyShifter::prepare(int sampleRate, int blockSize)
 {
-    float* wetSignalData = wetSignal.getWritePointer(channel);
-    float* tmpIData = tmpBufferI.getWritePointer(0);
-    float* tmpQData = tmpBufferQ.getWritePointer(0);
-    float* oscIData = tmpBufferOscI.getWritePointer(0);
-    float* oscQData = tmpBufferOscQ.getWritePointer(0);
-    float* firDelayData = firDelay.getWritePointer(channel);
+    this->tmpBufferI.setSize(1, blockSize);
+    this->tmpBufferI.clear(0, 0, blockSize);
+    this->tmpBufferQ.setSize(1, blockSize);
+    this->tmpBufferQ.clear(0, 0, blockSize);
+    
+    this->tmpBufferOscI.setSize(1, blockSize);
+    this->tmpBufferOscI.clear(0, 0, blockSize);
+    this->tmpBufferOscQ.setSize(1, blockSize);
+    this->tmpBufferOscQ.clear(0, 0, blockSize);
+    
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = static_cast<uint32_t>(blockSize);
+    spec.numChannels = 1;
+    
+    this->firFilterL.reset();
+    this->firFilterL.prepare(spec);
+    this->firFilterL.coefficients = coeffs;
+    
+    this->firFilterR.reset();
+    this->firFilterR.prepare(spec);
+    this->firFilterR.coefficients = coeffs;
+    
+    this->firDelay.setSize(2, firDelayInSamples);
+    this->firDelay.clear();
+    this->firDelayWritePosition = 0;
+    
+    this->oscI.prepare(spec);
+    this->oscI.initialise([](float x) { return std::sin(x); }, 128);
+    this->oscI.setFrequency(0.0f);
+    this->oscI.reset();
+    
+    this->oscQ.prepare(spec);
+    this->oscQ.initialise([](float x) { return std::cos(x); }, 128);
+    this->oscQ.setFrequency(0.0f);
+    this->oscQ.reset();
+}
 
-    for (int i = 0; i < bufferSize; i++)
+void FrequencyShifter::configure(float freq, float sidbandMix)
+{
+    this->oscI.setFrequency(freq);
+    this->oscQ.setFrequency(freq);
+    this->sideBandMix = sidbandMix;
+}
+
+void FrequencyShifter::process(float*const* bufferData, int bufferSize)
+{
+    
+    processOscillator(&this->tmpBufferOscI, &this->oscI);
+    processOscillator(&this->tmpBufferOscQ, &this->oscQ);
+    
+    for (int channel = 0; channel < 2; ++channel)
     {
-        // Write to delay line
-        firDelayData[firDelayWritePosition] = wetSignalData[i];
+        float* bufferChannelData = bufferData[channel];
+        float* tmpIData = this->tmpBufferI.getWritePointer(0);
+        float* tmpQData = this->tmpBufferQ.getWritePointer(0);
+        float* oscIData = this->tmpBufferOscI.getWritePointer(0);
+        float* oscQData = this->tmpBufferOscQ.getWritePointer(0);
+        float* firDelayData = this->firDelay.getWritePointer(channel);
         
-        // Read from delay line
-        int firDelayReadPosition = (firDelayWritePosition - firDelayInSamples) % firDelayInSamples;
-        if (firDelayReadPosition < 0)
+        for (int i = 0; i < bufferSize; i++)
         {
-           firDelayReadPosition += firDelayInSamples;
+            // Write to delay line
+            firDelayData[this->firDelayWritePosition] = bufferChannelData[i];
+    
+            // Read from delay line
+            int firDelayReadPosition = (this->firDelayWritePosition - this->firDelayInSamples) % this->firDelayInSamples;
+            if (firDelayReadPosition < 0)
+            {
+               firDelayReadPosition += this->firDelayInSamples;
+            }
+    
+            tmpIData[i] = firDelayData[firDelayReadPosition];
+    
+            this->firDelayWritePosition = (this->firDelayWritePosition + 1) % this->firDelayInSamples;
         }
         
-        tmpIData[i] = firDelayData[firDelayReadPosition];
-
-        firDelayWritePosition = (firDelayWritePosition + 1) % firDelayInSamples;
-    }
-
-    tmpBufferQ.copyFrom(0, 0, wetSignal.getReadPointer(channel), bufferSize);
-    juce::dsp::AudioBlock<float> block(tmpBufferQ);
-    juce::dsp::ProcessContextReplacing<float> context(block);
-
-    if (channel==0)
-        firFilterL.process(context);
-    else
-        firFilterR.process(context);
-               
-    for (int i = 0; i < bufferSize; i++)
-    {
-        wetSignalData[i] = tmpIData[i] * oscIData[i] - tmpQData[i] * oscQData[i];
+        tmpBufferQ.copyFrom(0, 0, bufferChannelData, bufferSize);
+        juce::dsp::AudioBlock<float> block(tmpBufferQ);
+        juce::dsp::ProcessContextReplacing<float> context(block);
+    
+        if (channel==0)
+            this->firFilterL.process(context);
+        else
+            this->firFilterR.process(context);
+    
+        for (int i = 0; i < bufferSize; i++)
+        {
+            float posSide = tmpIData[i] * oscIData[i] - tmpQData[i] * oscQData[i];
+            float negSide = tmpIData[i] * oscIData[i] + tmpQData[i] * oscQData[i];
+            
+            bufferChannelData[i] = this->sideBandMix * posSide + (1.f - this->sideBandMix) * negSide;
+        }
     }
 }
 
-void StrangeEchoesAudioProcessor::processOscillator(juce::AudioBuffer<float>* bufPtr,juce::dsp::Oscillator<float>* oscPtr)
+void FrequencyShifter::processOscillator(juce::AudioBuffer<float>* bufPtr,juce::dsp::Oscillator<float>* oscPtr)
 {
     bufPtr->clear();
     juce::dsp::AudioBlock<float> block(*bufPtr);
@@ -523,6 +532,7 @@ EffectSettings getEffectSettings(juce::AudioProcessorValueTreeState& apvts, floa
     settings.lfoRate =      apvts.getRawParameterValue("LFO Rate")->load();
     settings.lfoAmount =    apvts.getRawParameterValue("LFO Amount")->load();
     settings.freqShift =    apvts.getRawParameterValue("Frequency Shift")->load();
+    settings.sideBandMix =  apvts.getRawParameterValue("Sideband Mix")->load();
     settings.pitchShift =   apvts.getRawParameterValue("Pitch Shift")->load();
     settings.pitchShiftAmount =   apvts.getRawParameterValue("Pitch Shift Amount")->load();
     settings.lowPassFreq =  apvts.getRawParameterValue("LowPass Freq")->load();
@@ -577,6 +587,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout StrangeEchoesAudioProcessor:
                                                            "Frequency Shift",
                                                            juce::NormalisableRange<float>(0.0f, 1000.f, 0.1f, 1.f),
                                                            0.0f));
+    
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Sideband Mix",
+                                                           "Sideband Mix",
+                                                           juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.f),
+                                                           0.f));
     
     layout.add(std::make_unique<juce::AudioParameterFloat>("Pitch Shift",
                                                            "Pitch Shift",

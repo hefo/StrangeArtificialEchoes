@@ -21,7 +21,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics & g,
     g.fillEllipse(bounds);
     
     g.setColour(Colour(0u,0u,0u));
-    g.drawEllipse(bounds, 2.f);
+    g.drawEllipse(bounds, 1.f);
     
     if (auto* rslw = dynamic_cast<RotarySliderWithLabels*>(&slider))
     {
@@ -30,12 +30,12 @@ void LookAndFeel::drawRotarySlider(juce::Graphics & g,
         Path p;
         
         Rectangle<float> r;
-        r.setLeft(center.getX()-2);
-        r.setRight(center.getX()+2);
+        r.setLeft(center.getX()-1.5);
+        r.setRight(center.getX()+1.5);
         r.setTop(bounds.getY());
         r.setBottom(center.getY() - rslw->getTextHeight() * 2.0);
         
-        p.addRoundedRectangle(r, 2.f);
+        p.addRoundedRectangle(r, 1.f);
          
         jassert(rotaryStartAngle<rotaryEndAngle);
         auto sliderAngRad = jmap(sliderPosProportional, 0.f, 1.f, rotaryStartAngle, rotaryEndAngle);
@@ -61,7 +61,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics & g,
         auto titleStr = rslw->getTitleString();
         strWidth = g.getCurrentFont().getStringWidth(titleStr);
         r.setSize(strWidth + 4, rslw->getTextHeight() + 2);
-        r.setCentre(bounds.getCentreX(), bounds.getCentreY() - bounds.getHeight() / 2 - 10);
+        r.setCentre(bounds.getCentreX(), bounds.getCentreY() - bounds.getHeight() / 2 - 8);
         g.setColour(Colours::black.withAlpha(0.0f));
         g.fillRect(r);
         g.setColour(Colours::whitesmoke);
@@ -102,12 +102,12 @@ juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const
     auto bounds = getLocalBounds();
     auto size = juce::jmin(bounds.getWidth(), bounds.getHeight());
     
-    size -= getTextHeight() * 2;
+    size -= getTextHeight() * 1.2;
     
     juce::Rectangle<int> r;
     r.setSize(size, size);
     r.setCentre(bounds.getCentreX(), 0);
-    r.setY(20);
+    r.setY(15);
     
     return r;
     
@@ -172,35 +172,36 @@ juce::String RotarySliderWithLabels::getDisplayString() const
 //==============================================================================
 StrangeEchoesAudioProcessorEditor::StrangeEchoesAudioProcessorEditor (StrangeEchoesAudioProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p),
-dryWetSlider    (*processorRef.apvts.getParameter("Dry/Wet Mix"),    "%"),
-delayTimeSlider (*processorRef.apvts.getParameter("Delay Time"),     "ms"),
-feedbackSlider  (*processorRef.apvts.getParameter("Feedback"),       "%"),
-freqShiftSlider (*processorRef.apvts.getParameter("Frequency Shift"),"Hz"),
-pitchShiftSlider (*processorRef.apvts.getParameter("Pitch Shift"),   "st"),
-pitchShiftAmountSlider (*processorRef.apvts.getParameter("Pitch Shift Amount"),"%"),
-lowPassSlider   (*processorRef.apvts.getParameter("LowPass Freq"),   "Hz"),
-highPassSlider  (*processorRef.apvts.getParameter("HighPass Freq"),  "Hz"),
-lfoAmountSlider (*processorRef.apvts.getParameter("LFO Amount"),     "ms"),
-lfoRateSlider   (*processorRef.apvts.getParameter("LFO Rate"),       "Hz"),
+dryWetSlider            (*processorRef.apvts.getParameter("Dry/Wet Mix"),       "%"),
+delayTimeSlider         (*processorRef.apvts.getParameter("Delay Time"),        "ms"),
+feedbackSlider          (*processorRef.apvts.getParameter("Feedback"),          "%"),
+freqShiftSlider         (*processorRef.apvts.getParameter("Frequency Shift"),   "Hz"),
+sidebandSlider          (*processorRef.apvts.getParameter("Sideband Mix"),      "%"),
+pitchShiftSlider        (*processorRef.apvts.getParameter("Pitch Shift"),       "st"),
+pitchShiftAmountSlider  (*processorRef.apvts.getParameter("Pitch Shift Amount"),"%"),
+lowPassSlider           (*processorRef.apvts.getParameter("LowPass Freq"),      "Hz"),
+highPassSlider          (*processorRef.apvts.getParameter("HighPass Freq"),     "Hz"),
+lfoAmountSlider         (*processorRef.apvts.getParameter("LFO Amount"),        "ms"),
+lfoRateSlider           (*processorRef.apvts.getParameter("LFO Rate"),          "Hz"),
 
-dryWetSliderAttachment      (processorRef.apvts, "Dry/Wet Mix",     dryWetSlider),
-delayTimeSliderAttachment   (processorRef.apvts, "Delay Time",      delayTimeSlider),
-feedbackSliderAttachment    (processorRef.apvts, "Feedback",        feedbackSlider),
-freqShiftSliderAttachment   (processorRef.apvts, "Frequency Shift", freqShiftSlider),
-pitchShiftSliderAttachment  (processorRef.apvts, "Pitch Shift",     pitchShiftSlider),
-pitchShiftAmountSliderAttachment (processorRef.apvts, "Pitch Shift Amount",     pitchShiftAmountSlider),
-
-lowPassSliderAttachment     (processorRef.apvts, "LowPass Freq",    lowPassSlider),
-highPassSliderAttachment    (processorRef.apvts, "HighPass Freq",   highPassSlider),
-lfoAmountSliderAttachment   (processorRef.apvts, "LFO Amount",      lfoAmountSlider),
-lfoRateSliderAttachment     (processorRef.apvts, "LFO Rate",        lfoRateSlider),
-syncSliderAttachment        (processorRef.apvts, "Sync Options",    syncSlider),
-noteTypeSliderAttachment    (processorRef.apvts, "Note Type",    noteTypeSlider),
-noteSelectorAttachment      (processorRef.apvts, "Tempo-Relative Delay Time",    noteSelector)
+dryWetSliderAttachment          (processorRef.apvts, "Dry/Wet Mix",                 dryWetSlider),
+delayTimeSliderAttachment       (processorRef.apvts, "Delay Time",                  delayTimeSlider),
+feedbackSliderAttachment        (processorRef.apvts, "Feedback",                    feedbackSlider),
+freqShiftSliderAttachment       (processorRef.apvts, "Frequency Shift",             freqShiftSlider),
+sidebandSliderAttachment        (processorRef.apvts, "Sideband Mix",                sidebandSlider),
+pitchShiftSliderAttachment      (processorRef.apvts, "Pitch Shift",                 pitchShiftSlider),
+pitchShiftAmountSliderAttachment(processorRef.apvts, "Pitch Shift Amount",          pitchShiftAmountSlider),
+lowPassSliderAttachment         (processorRef.apvts, "LowPass Freq",                lowPassSlider),
+highPassSliderAttachment        (processorRef.apvts, "HighPass Freq",               highPassSlider),
+lfoAmountSliderAttachment       (processorRef.apvts, "LFO Amount",                  lfoAmountSlider),
+lfoRateSliderAttachment         (processorRef.apvts, "LFO Rate",                    lfoRateSlider),
+syncSliderAttachment            (processorRef.apvts, "Sync Options",                syncSlider),
+noteTypeSliderAttachment        (processorRef.apvts, "Note Type",                   noteTypeSlider),
+noteSelectorAttachment          (processorRef.apvts, "Tempo-Relative Delay Time",   noteSelector)
 {
     juce::ignoreUnused (processorRef);
 
-    setSize (500, 500);
+    setSize (500, 400);
 
     syncLookAndFeel.setColour (juce::Slider::thumbColourId, juce::Colour(197u, 124u, 49u));
     syncLookAndFeel.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::black.withAlpha(0.0f));
@@ -227,27 +228,53 @@ void StrangeEchoesAudioProcessorEditor::paint (juce::Graphics& g)
     using namespace juce;
     
     g.fillAll(juce::Colour(41u,83u,77u));
-    
+    juce::Rectangle<int> r;
+
     auto bounds = getLocalBounds();
-     
-//    juce::Rectangle<int> r;
-//    
-//    // Colour on Time area
-//    g.setColour(juce::Colour(71u, 79u, 78u));
-//    r.setSize(bounds.getWidth()*0.33, bounds.getHeight()*0.725);
-//    r.setCentre(bounds.getCentreX() - bounds.getWidth()*0.33, bounds.getCentreY() - bounds.getHeight()*0.275*0.5f);
-//    g.fillRect(r);
-//    
-//    // Colour on EQ area
-//    g.setColour(juce::Colour(62u, 87u, 82u));
-//    r.setSize(bounds.getWidth()*0.66, bounds.getHeight()*0.275);
-//    r.setCentre(bounds.getCentreX() + bounds.getWidth()*0.165, bounds.getHeight()*0.5875);
-//    g.fillRect(r);
-//    
-//    // Color on LFO area
-//    g.setColour(juce::Colour(97u, 117u, 113u));
-//    r.setCentre(bounds.getCentreX() - bounds.getWidth()*0.165, bounds.getHeight()*0.8625);
-//    g.fillRect(r);
+    auto topArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
+    
+    g.setColour(juce::Colour(62u, 87u, 82u));
+    r.setSize(topArea.getWidth(), topArea.getHeight());
+    r.setCentre(topArea.getCentreX(), topArea.getCentreY());
+    g.fillRect(r);
+    
+    auto eqArea = bounds.removeFromTop(bounds.getHeight()*0.33);
+
+    g.setColour(juce::Colour(41u,83u,77u));
+    r.setSize(eqArea.getWidth(), eqArea.getHeight());
+    r.setCentre(eqArea.getCentreX(), eqArea.getCentreY());
+    g.fillRect(r);
+    
+    auto lfoArea = bounds.removeFromTop(bounds.getHeight()*0.5);
+
+    g.setColour(juce::Colour(62u, 87u, 82u));
+    r.setSize(lfoArea.getWidth(), lfoArea.getHeight());
+    r.setCentre(lfoArea.getCentreX(), lfoArea.getCentreY());
+    g.fillRect(r);
+    
+    g.setColour(juce::Colour(97u, 117u, 113u));
+    r.setSize(bounds.getWidth(), bounds.getHeight());
+    r.setCentre(bounds.getCentreX(), bounds.getCentreY());
+    g.fillRect(r);
+    
+    // Colour on Time area
+    bounds = getLocalBounds();
+    g.setColour(juce::Colour(71u, 79u, 78u));
+    r.setSize(bounds.getWidth()*0.33, bounds.getHeight()*0.5511);
+    r.setCentre(bounds.getCentreX() - bounds.getWidth()*0.67*0.5, bounds.getCentreY() - bounds.getHeight()*0.4489*0.5);
+    g.fillRect(r);
+    
+    auto cr = Rectangle<float>(bounds.getCentreX(), bounds.getCentreY(), bounds.getWidth()*0.1, bounds.getWidth()*0.1);
+    
+    for (int i = 0; i < 24; i++)
+    {
+        float radi = 0.1 + 0.05*i;
+        cr.setSize( bounds.getWidth() * radi, bounds.getWidth() * radi);
+        cr.setCentre(bounds.getCentreX(), bounds.getCentreY());
+
+        g.setColour(juce::Colour(69u, 77u, 76u));
+        g.drawEllipse(cr, 1.f);
+    }
     
     g.setFont (15.0f);
 }
@@ -260,7 +287,7 @@ void StrangeEchoesAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
     
     // top
-    auto topArea = bounds.removeFromTop(bounds.getHeight() * 0.40);
+    auto topArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
     auto delayTimeArea = topArea.removeFromLeft(topArea.getWidth() * 0.33);
     auto dryWetArea = topArea.removeFromRight(topArea.getWidth() * 0.5);
     
@@ -268,9 +295,10 @@ void StrangeEchoesAudioProcessorEditor::resized()
     dryWetSlider.setBounds(dryWetArea);
     feedbackSlider.setBounds(topArea);
     
-    // mid
+    // second
     auto midArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
     auto syncArea = midArea.removeFromLeft(midArea.getWidth() * 0.33);
+    //syncArea = syncArea.removeFromLeft(syncArea.getWidth() * 0.66);
     
     syncSlider.setBounds(syncArea.removeFromTop(syncArea.getHeight() * 0.33));
     noteSelector.setBounds(syncArea.removeFromTop(syncArea.getHeight() * 0.5));
@@ -279,16 +307,23 @@ void StrangeEchoesAudioProcessorEditor::resized()
     lowPassSlider.setBounds(midArea.removeFromRight(midArea.getWidth() * 0.5));
     highPassSlider.setBounds(midArea);
     
+    // third
     auto lfoArea = bounds.removeFromTop(bounds.getHeight() * 0.5);
+        
+    int margin = lfoArea.getWidth()*0.0438581;
+    lfoArea.removeFromLeft(margin);
+    lfoArea.removeFromRight(margin);
     
-    //bottom
-    lfoAmountSlider.setBounds(lfoArea.removeFromLeft(bounds.getWidth() * 0.5));
+    lfoAmountSlider.setBounds(lfoArea.removeFromLeft(lfoArea.getWidth() * 0.5));
     lfoRateSlider.setBounds(lfoArea);
     
-    freqShiftSlider.setBounds(bounds.removeFromRight(bounds.getWidth() * 0.33));
-    pitchShiftSlider.setBounds(bounds.removeFromRight(bounds.getWidth() * 0.5));
-    pitchShiftAmountSlider.setBounds(bounds);
-
+    //bottom
+    auto pitchShiftArea = bounds.removeFromLeft(bounds.getWidth() * 0.5);
+    
+    pitchShiftAmountSlider.setBounds(pitchShiftArea.removeFromLeft(pitchShiftArea.getWidth() * 0.5));
+    pitchShiftSlider.setBounds(pitchShiftArea);
+    freqShiftSlider.setBounds(bounds.removeFromLeft(bounds.getWidth() * 0.5));
+    sidebandSlider.setBounds(bounds);
 }
 
 std::vector<juce::Component*> StrangeEchoesAudioProcessorEditor::getComps()
@@ -299,6 +334,7 @@ std::vector<juce::Component*> StrangeEchoesAudioProcessorEditor::getComps()
         &delayTimeSlider,
         &feedbackSlider,
         &freqShiftSlider,
+        &sidebandSlider,
         &pitchShiftSlider,
         &pitchShiftAmountSlider,
         &lowPassSlider,
