@@ -68,10 +68,13 @@ private:
     sidebandSlider,
     pitchShiftSlider,
     pitchShiftAmountSlider,
-    lowPassSlider,
-    highPassSlider,
+    //lowPassSlider,
+    //highPassSlider,
     lfoAmountSlider,
     lfoRateSlider;
+    
+    juce::Slider lowPassSlider, highPassSlider;
+    juce::Label lowPassLabel, highPassLabel;
     
     juce::Slider syncSlider, noteSelector, noteTypeSlider;
 
@@ -89,6 +92,7 @@ private:
     syncSliderAttachment,
     noteSelectorAttachment,
     noteTypeSliderAttachment;
+    
     
     juce::LookAndFeel_V4 syncLookAndFeel;
     

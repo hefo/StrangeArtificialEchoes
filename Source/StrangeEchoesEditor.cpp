@@ -179,8 +179,8 @@ freqShiftSlider         (*processorRef.apvts.getParameter("Frequency Shift"),   
 sidebandSlider          (*processorRef.apvts.getParameter("Sideband Mix"),      "%"),
 pitchShiftSlider        (*processorRef.apvts.getParameter("Pitch Shift"),       "st"),
 pitchShiftAmountSlider  (*processorRef.apvts.getParameter("Pitch Shift Amount"),"%"),
-lowPassSlider           (*processorRef.apvts.getParameter("LowPass Freq"),      "Hz"),
-highPassSlider          (*processorRef.apvts.getParameter("HighPass Freq"),     "Hz"),
+//lowPassSlider           (*processorRef.apvts.getParameter("LowPass Freq"),      "Hz"),
+//highPassSlider          (*processorRef.apvts.getParameter("HighPass Freq"),     "Hz"),
 lfoAmountSlider         (*processorRef.apvts.getParameter("LFO Amount"),        "ms"),
 lfoRateSlider           (*processorRef.apvts.getParameter("LFO Rate"),          "Hz"),
 
@@ -210,6 +210,25 @@ noteSelectorAttachment          (processorRef.apvts, "Tempo-Relative Delay Time"
     syncSlider.setLookAndFeel(&syncLookAndFeel);
     noteSelector.setLookAndFeel(&syncLookAndFeel);
     noteTypeSlider.setLookAndFeel(&syncLookAndFeel);
+    lowPassSlider.setLookAndFeel(&syncLookAndFeel);
+    highPassSlider.setLookAndFeel(&syncLookAndFeel);
+    
+    lowPassSlider.setTextValueSuffix(" Hz");
+    lowPassSlider.setSize(lowPassSlider.getWidth()*0.75, lowPassSlider.getHeight());
+    
+    auto lpbound = lowPassSlider.getBounds();
+    
+    lowPassSlider.setCentrePosition(lpbound.getCentreX()+50, lpbound.getCentreY());
+    lowPassLabel.setText("LP: ", juce::dontSendNotification);
+    lowPassLabel.attachToComponent (&lowPassSlider, true); // [4]
+    
+    highPassSlider.setTextValueSuffix(" Hz");
+    highPassSlider.setSize(highPassSlider.getWidth()*0.75, highPassSlider.getHeight());
+    
+    auto hpbound = highPassSlider.getBounds();
+    highPassSlider.setCentrePosition(hpbound.getCentreX()+50, hpbound.getCentreY());
+    highPassLabel.setText("HP: ", juce::dontSendNotification);
+    highPassLabel.attachToComponent (&highPassSlider, true); // [4]
     
     for (auto* comp : getComps())
     {
@@ -240,7 +259,7 @@ void StrangeEchoesAudioProcessorEditor::paint (juce::Graphics& g)
     
     auto eqArea = bounds.removeFromTop(bounds.getHeight()*0.33);
 
-    g.setColour(juce::Colour(41u,83u,77u));
+    g.setColour(juce::Colour(97u, 117u, 113u));
     r.setSize(eqArea.getWidth(), eqArea.getHeight());
     r.setCentre(eqArea.getCentreX(), eqArea.getCentreY());
     g.fillRect(r);
@@ -259,7 +278,7 @@ void StrangeEchoesAudioProcessorEditor::paint (juce::Graphics& g)
     
     // Colour on Time area
     bounds = getLocalBounds();
-    g.setColour(juce::Colour(71u, 79u, 78u));
+    g.setColour(juce::Colour(43u,59u,56u));
     r.setSize(bounds.getWidth()*0.33, bounds.getHeight()*0.5511);
     r.setCentre(bounds.getCentreX() - bounds.getWidth()*0.67*0.5, bounds.getCentreY() - bounds.getHeight()*0.4489*0.5);
     g.fillRect(r);
@@ -304,15 +323,18 @@ void StrangeEchoesAudioProcessorEditor::resized()
     noteSelector.setBounds(syncArea.removeFromTop(syncArea.getHeight() * 0.5));
     noteTypeSlider.setBounds(syncArea);
     
-    lowPassSlider.setBounds(midArea.removeFromRight(midArea.getWidth() * 0.5));
+    lowPassLabel.setBounds(midArea);
+    highPassLabel.setBounds(midArea);
+    lowPassSlider.setBounds(midArea.removeFromTop(midArea.getHeight() * 0.5));
     highPassSlider.setBounds(midArea);
+    
     
     // third
     auto lfoArea = bounds.removeFromTop(bounds.getHeight() * 0.5);
         
-    int margin = lfoArea.getWidth()*0.0438581;
-    lfoArea.removeFromLeft(margin);
-    lfoArea.removeFromRight(margin);
+//    int margin = lfoArea.getWidth()*0.0438581;
+//    lfoArea.removeFromLeft(margin);
+//    lfoArea.removeFromRight(margin);
     
     lfoAmountSlider.setBounds(lfoArea.removeFromLeft(lfoArea.getWidth() * 0.5));
     lfoRateSlider.setBounds(lfoArea);

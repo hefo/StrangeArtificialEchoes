@@ -119,7 +119,12 @@ void StrangeEchoesAudioProcessor::prepareToPlay (double sampleRate, int samplesP
     // TODO: consider changing pitch shift preset based on block size (weird noises when buffer size < 128)
     tmpPitchShiftInput.setSize(2, samplesPerBlock);
     tmpPitchShiftOutput.setSize(2, samplesPerBlock);
-    pitchShifter.presetCheaper(2, sampleRate);
+    
+    if (samplesPerBlock <= 128)
+        pitchShifter.configure(2, sampleRate * 0.05, sampleRate * 0.02); //even cheaper
+    else
+        pitchShifter.presetCheaper(2, sampleRate);
+    
     pitchShifter.setTransposeSemitones(effectSettings.pitchShift);
     
     freqShifter.prepare(sampleRate, samplesPerBlock);
@@ -171,8 +176,8 @@ void StrangeEchoesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
     
     // extract BPM from DAW (needs fix, works in Ableton but crashes when running in standalone mode)
     float currentBpm { 120 };
-    if (auto bpmFromHost = *getPlayHead()->getPosition()->getBpm())
-            currentBpm = bpmFromHost;
+//    if (auto bpmFromHost = *getPlayHead()->getPosition()->getBpm())
+//            currentBpm = bpmFromHost;
     
     auto effectSettings = getEffectSettings(apvts, currentBpm);
     delayTimeMsSmooth.setTargetValue(effectSettings.delayTimeMs);
@@ -605,12 +610,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout StrangeEchoesAudioProcessor:
     
     layout.add(std::make_unique<juce::AudioParameterFloat>("LowPass Freq",
                                                            "Low Pass Filter",
-                                                           juce::NormalisableRange<float>(20.0f, 22000.f, 1.f, 1.f),
+                                                           juce::NormalisableRange<float>(20.0f, 22000.f, 0.1f, 1.f / std::log2(1.f + std::sqrt(22000.f / 20.0f))),
                                                            22000.0f));
     
     layout.add(std::make_unique<juce::AudioParameterFloat>("HighPass Freq",
                                                            "High Pass Filter",
-                                                           juce::NormalisableRange<float>(20.0f, 22000.f, 1.f, 1.f),
+                                                           juce::NormalisableRange<float>(20.0f, 22000.f, 0.1f, 1.f / std::log2(1.f + std::sqrt(22000.f / 20.0f))),
                                                            20.0f));
     
     layout.add(std::make_unique<juce::AudioParameterFloat>("LFO Amount",
