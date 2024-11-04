@@ -1,7 +1,7 @@
 # Strange Artificial Echoes
 
 
-**Strange Artificial Echoes** is a delay plugin based on the JUCE framework.
+**Strange Artificial Echoes** is a stereo delay plugin based on the JUCE framework.
 
 ### Features:
 - LFO modulation of delay time
