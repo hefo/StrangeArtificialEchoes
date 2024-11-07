@@ -238,6 +238,10 @@ noteSelectorAttachment          (processorRef.apvts, "Tempo-Relative Delay Time"
 
 StrangeEchoesAudioProcessorEditor::~StrangeEchoesAudioProcessorEditor()
 {
+    for (auto& c : getComps())
+    {
+        c->setLookAndFeel(nullptr);
+    }
 }
 
 //==============================================================================
