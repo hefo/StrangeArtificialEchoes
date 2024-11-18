@@ -12,6 +12,7 @@ StrangeEchoesAudioProcessor::StrangeEchoesAudioProcessor()
                      #endif
                        )
 {
+    apvts.state = juce::ValueTree("savedParams");
 }
 
 StrangeEchoesAudioProcessor::~StrangeEchoesAudioProcessor()
@@ -176,8 +177,8 @@ void StrangeEchoesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer
     
     // extract BPM from DAW (needs fix, works in Ableton but crashes when running in standalone mode)
     float currentBpm { 120 };
-//    if (auto bpmFromHost = *getPlayHead()->getPosition()->getBpm())
-//            currentBpm = bpmFromHost;
+    if (auto bpmFromHost = *getPlayHead()->getPosition()->getBpm())
+            currentBpm = bpmFromHost;
     
     auto effectSettings = getEffectSettings(apvts, currentBpm);
     delayTimeMsSmooth.setTargetValue(effectSettings.delayTimeMs);
@@ -478,14 +479,29 @@ void StrangeEchoesAudioProcessor::getStateInformation (juce::MemoryBlock& destDa
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused (destData);
+    
+    std::unique_ptr <juce::XmlElement> xml (apvts.state.createXml());
+    copyXmlToBinary(*xml, destData);
+    
+    //juce::ignoreUnused (destData);
 }
 
 void StrangeEchoesAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused (data, sizeInBytes);
+    
+    std::unique_ptr<juce::XmlElement> storedParams (getXmlFromBinary(data, sizeInBytes));
+    
+    if (storedParams != nullptr)
+    {
+        if (storedParams -> hasTagName(apvts.state.getType()))
+        {
+            apvts.state = juce::ValueTree::fromXml(*storedParams);
+        }
+    }
+    
+    //juce::ignoreUnused (data, sizeInBytes);
 }
 
 EffectSettings getEffectSettings(juce::AudioProcessorValueTreeState& apvts, float bpm)

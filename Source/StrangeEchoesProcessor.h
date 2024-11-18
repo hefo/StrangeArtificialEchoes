@@ -137,6 +137,9 @@ private:
     
     FrequencyShifter freqShifter;
     
+    std::unique_ptr <juce::XmlElement> xml;
+    //std::unique_ptr <juce::XmlElement> storedParams;
+    
     void writeToDelayBuffer(juce::AudioBuffer<float>& buffer,
                             int channelIn, int channelOut,
                             float startGain, float endGain,
