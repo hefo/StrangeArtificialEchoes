@@ -8,7 +8,7 @@
 - Pitch shifter based on Signalsmith Stretch library
 - Bode-style frequency shifter
 
-![](./screenshots/GUIv1.0.png)
+![](./screenshots/GUIv1.0-2.png)
 
 ## Credits
 
